@@ -749,7 +749,7 @@
             <div>
               <label for="data-abertura">Data e hora da abertura</label>
               <input type="datetime-local" id="data-abertura" name="data-abertura" />
-              <div class="field-help">Use o horário do registro inicial do caso. [web:681]</div>
+              <div class="field-help">Use o horário do registro inicial do caso.</div>
             </div>
           </div>
 
@@ -769,6 +769,32 @@
             <div>
               <label for="unidade">Associação / unidade / operador</label>
               <input type="text" id="unidade" name="unidade" placeholder="Ex.: Unidade Centro" />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="case-fieldset">
+          <legend>Bloco B — Dados do associado</legend>
+
+          <div class="row">
+            <div>
+              <label for="nome-associado">Nome do associado</label>
+              <input type="text" id="nome-associado" name="nome-associado" placeholder="Nome completo ou razão social" />
+            </div>
+            <div>
+              <label for="doc-associado">Documento (CPF / CNPJ)</label>
+              <input type="text" id="doc-associado" name="doc-associado" placeholder="Somente números" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="id-contrato">Contrato / apólice / ID interno</label>
+              <input type="text" id="id-contrato" name="id-contrato" placeholder="Ex.: apólice ou código interno" />
+            </div>
+            <div>
+              <label for="placa-veiculo">Placa / identificação do veículo</label>
+              <input type="text" id="placa-veiculo" name="placa-veiculo" placeholder="Se aplicável ao caso" />
             </div>
           </div>
         </fieldset>
