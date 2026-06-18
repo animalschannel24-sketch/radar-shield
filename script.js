@@ -5,6 +5,15 @@ const SUPABASE_ANON_KEY = "sb_publishable_tjMHhHDymhlazNWD8UPr4g_79o03fhZ";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const UFS_BRASIL = new Set([
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
+  "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
+  "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+]);
+
+let cidadesIBGE = new Set();
+let cidadesCarregadas = false;
+
 function getElement(id) {
   return document.getElementById(id);
 }
@@ -39,6 +48,23 @@ function letrasENumerosMaiusculos(valor) {
   return (valor || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
+function somenteLetrasEspacosHifenAcentos(valor) {
+  return (valor || "").replace(/[^a-zA-ZÀ-ÿ\s'-]/g, "");
+}
+
+function removerAcentos(valor) {
+  return (valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function normalizarTextoComparacao(valor) {
+  return removerAcentos(valor)
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
 function aplicarMaxLength(id, maximo) {
   const campo = getElement(id);
   if (!campo) return;
@@ -52,11 +78,46 @@ function configurarLimitesHTML() {
   aplicarMaxLength("nome-associado", 120);
   aplicarMaxLength("doc-associado", 14);
   aplicarMaxLength("id-contrato", 50);
-  aplicarMaxLength("placa-veiculo", 8);
+  aplicarMaxLength("placa-veiculo", 7);
   aplicarMaxLength("cidade-evento", 80);
   aplicarMaxLength("uf-evento", 2);
   aplicarMaxLength("local-evento", 150);
   aplicarMaxLength("resumo-evento", 1000);
+}
+
+async function carregarCidadesIBGE() {
+  if (cidadesCarregadas) return;
+
+  try {
+    const resposta = await fetch("https://servicodados.ibge.gov.br/api/v1/localidades/municipios");
+    const dados = await resposta.json();
+
+    cidadesIBGE = new Set(
+      dados.map((cidade) => normalizarTextoComparacao(cidade.nome))
+    );
+
+    cidadesCarregadas = true;
+  } catch (error) {
+    console.error("Não foi possível carregar a lista de cidades do IBGE.", error);
+  }
+}
+
+function placaValida(placa) {
+  if (!placa) return false;
+
+  const placaNormal = letrasENumerosMaiusculos(placa);
+
+  const padraoAntigo = /^[A-Z]{3}[0-9]{4}$/;
+  const padraoMercosul = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/;
+
+  return padraoAntigo.test(placaNormal) || padraoMercosul.test(placaNormal);
+}
+
+function cidadeValida(nomeCidade) {
+  if (!nomeCidade) return true;
+  if (!cidadesCarregadas) return true;
+
+  return cidadesIBGE.has(normalizarTextoComparacao(nomeCidade));
 }
 
 function validarCampo(campo) {
@@ -81,12 +142,8 @@ function validarCampo(campo) {
   }
 
   if (id === "placa-veiculo" && valor) {
-    const placa = letrasENumerosMaiusculos(valor);
-
-    if (placa.length < 7) {
-      mensagem = "A placa deve ter 7 caracteres.";
-    } else if (placa.length > 7) {
-      mensagem = "A placa deve ter exatamente 7 caracteres.";
+    if (!placaValida(valor)) {
+      mensagem = "A placa deve estar em formato válido, como ABC1234 ou ABC1D23.";
     }
   }
 
@@ -95,8 +152,8 @@ function validarCampo(campo) {
 
     if (uf.length !== 2) {
       mensagem = "A UF deve ter exatamente 2 letras.";
-    } else if (!/^[A-Z]{2}$/.test(uf)) {
-      mensagem = "A UF deve conter apenas letras.";
+    } else if (!UFS_BRASIL.has(uf)) {
+      mensagem = "Informe uma sigla de estado válida do Brasil.";
     }
   }
 
@@ -104,8 +161,12 @@ function validarCampo(campo) {
     mensagem = "O nome do associado pode ter no máximo 120 caracteres.";
   }
 
-  if (id === "cidade-evento" && valor.length > 80) {
-    mensagem = "A cidade do evento pode ter no máximo 80 caracteres.";
+  if (id === "cidade-evento" && valor) {
+    if (valor.length > 80) {
+      mensagem = "A cidade do evento pode ter no máximo 80 caracteres.";
+    } else if (!cidadeValida(valor)) {
+      mensagem = "Informe uma cidade brasileira válida.";
+    }
   }
 
   if (id === "local-evento" && valor.length > 150) {
@@ -136,6 +197,10 @@ function normalizarCampo(campo) {
       .replace(/[^a-zA-Z]/g, "")
       .toUpperCase()
       .slice(0, 2);
+  }
+
+  if (campo.id === "cidade-evento") {
+    campo.value = somenteLetrasEspacosHifenAcentos(campo.value).slice(0, 80);
   }
 }
 
@@ -243,8 +308,9 @@ async function salvarCaso(event) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   configurarLimitesHTML();
+  await carregarCidadesIBGE();
   configurarValidacaoEmTempoReal();
 
   const form = document.querySelector(".case-form");
