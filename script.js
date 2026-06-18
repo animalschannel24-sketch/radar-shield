@@ -5,14 +5,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_tjMHhHDymhlazNWD8UPr4g_79o03fhZ";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const UFS_BRASIL = new Set([
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
-  "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
-  "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
-]);
-
-let cidadesIBGE = new Set();
-let cidadesCarregadas = false;
+let municipiosPorUF = new Map();
 
 function getElement(id) {
   return document.getElementById(id);
@@ -48,23 +41,6 @@ function letrasENumerosMaiusculos(valor) {
   return (valor || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
-function somenteLetrasEspacosHifenAcentos(valor) {
-  return (valor || "").replace(/[^a-zA-ZÀ-ÿ\s'-]/g, "");
-}
-
-function removerAcentos(valor) {
-  return (valor || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-function normalizarTextoComparacao(valor) {
-  return removerAcentos(valor)
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-}
-
 function aplicarMaxLength(id, maximo) {
   const campo = getElement(id);
   if (!campo) return;
@@ -79,45 +55,99 @@ function configurarLimitesHTML() {
   aplicarMaxLength("doc-associado", 14);
   aplicarMaxLength("id-contrato", 50);
   aplicarMaxLength("placa-veiculo", 7);
-  aplicarMaxLength("cidade-evento", 80);
-  aplicarMaxLength("uf-evento", 2);
   aplicarMaxLength("local-evento", 150);
   aplicarMaxLength("resumo-evento", 1000);
-}
-
-async function carregarCidadesIBGE() {
-  if (cidadesCarregadas) return;
-
-  try {
-    const resposta = await fetch("https://servicodados.ibge.gov.br/api/v1/localidades/municipios");
-    const dados = await resposta.json();
-
-    cidadesIBGE = new Set(
-      dados.map((cidade) => normalizarTextoComparacao(cidade.nome))
-    );
-
-    cidadesCarregadas = true;
-  } catch (error) {
-    console.error("Não foi possível carregar a lista de cidades do IBGE.", error);
-  }
 }
 
 function placaValida(placa) {
   if (!placa) return false;
 
   const placaNormal = letrasENumerosMaiusculos(placa);
-
   const padraoAntigo = /^[A-Z]{3}[0-9]{4}$/;
   const padraoMercosul = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/;
 
   return padraoAntigo.test(placaNormal) || padraoMercosul.test(placaNormal);
 }
 
-function cidadeValida(nomeCidade) {
-  if (!nomeCidade) return true;
-  if (!cidadesCarregadas) return true;
+function limparSelect(select, placeholder) {
+  if (!select) return;
 
-  return cidadesIBGE.has(normalizarTextoComparacao(nomeCidade));
+  select.innerHTML = "";
+  const option = document.createElement("option");
+  option.value = "";
+  option.textContent = placeholder;
+  select.appendChild(option);
+}
+
+function preencherSelect(select, opcoes, placeholder) {
+  if (!select) return;
+
+  limparSelect(select, placeholder);
+
+  opcoes.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.sigla || item.nome;
+    option.textContent = item.rotulo || item.nome || item.sigla;
+    select.appendChild(option);
+  });
+}
+
+async function carregarEstados() {
+  const ufSelect = getElement("uf-evento");
+  if (!ufSelect) return;
+
+  try {
+    const resposta = await fetch("https://servicodados.ibge.gov.br/api/v1/localidades/estados");
+    const estados = await resposta.json();
+
+    estados.sort((a, b) => a.sigla.localeCompare(b.sigla, "pt-BR"));
+
+    const opcoes = estados.map((estado) => ({
+      sigla: estado.sigla,
+      rotulo: `${estado.sigla} - ${estado.nome}`
+    }));
+
+    preencherSelect(ufSelect, opcoes, "Selecione o estado");
+  } catch (error) {
+    console.error("Erro ao carregar estados:", error);
+  }
+}
+
+async function carregarCidadesDaUF(uf) {
+  const cidadeSelect = getElement("cidade-evento");
+  if (!cidadeSelect) return;
+
+  if (!uf) {
+    cidadeSelect.disabled = true;
+    limparSelect(cidadeSelect, "Selecione primeiro o estado");
+    return;
+  }
+
+  cidadeSelect.disabled = true;
+  limparSelect(cidadeSelect, "Carregando cidades...");
+
+  try {
+    if (!municipiosPorUF.has(uf)) {
+      const resposta = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`);
+      const municipios = await resposta.json();
+
+      const nomes = municipios
+        .map((municipio) => municipio.nome)
+        .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+      municipiosPorUF.set(uf, nomes);
+    }
+
+    const cidades = municipiosPorUF.get(uf) || [];
+    const opcoes = cidades.map((nome) => ({ nome }));
+
+    preencherSelect(cidadeSelect, opcoes, "Selecione a cidade");
+    cidadeSelect.disabled = false;
+  } catch (error) {
+    console.error("Erro ao carregar cidades:", error);
+    limparSelect(cidadeSelect, "Não foi possível carregar as cidades");
+    cidadeSelect.disabled = true;
+  }
 }
 
 function validarCampo(campo) {
@@ -147,26 +177,27 @@ function validarCampo(campo) {
     }
   }
 
-  if (id === "uf-evento" && valor) {
-    const uf = valor.toUpperCase();
+  if (id === "uf-evento" && !valor) {
+    mensagem = "Selecione o estado do evento.";
+  }
 
-    if (uf.length !== 2) {
-      mensagem = "A UF deve ter exatamente 2 letras.";
-    } else if (!UFS_BRASIL.has(uf)) {
-      mensagem = "Informe uma sigla de estado válida do Brasil.";
+  if (id === "cidade-evento") {
+    const uf = valorOuNull("uf-evento");
+
+    if (!uf) {
+      mensagem = "Selecione primeiro o estado.";
+    } else if (!valor) {
+      mensagem = "Selecione a cidade do evento.";
+    } else {
+      const cidades = municipiosPorUF.get(uf) || [];
+      if (!cidades.includes(valor)) {
+        mensagem = "Selecione uma cidade válida da lista.";
+      }
     }
   }
 
   if (id === "nome-associado" && valor.length > 120) {
     mensagem = "O nome do associado pode ter no máximo 120 caracteres.";
-  }
-
-  if (id === "cidade-evento" && valor) {
-    if (valor.length > 80) {
-      mensagem = "A cidade do evento pode ter no máximo 80 caracteres.";
-    } else if (!cidadeValida(valor)) {
-      mensagem = "Informe uma cidade brasileira válida.";
-    }
   }
 
   if (id === "local-evento" && valor.length > 150) {
@@ -191,17 +222,6 @@ function normalizarCampo(campo) {
   if (campo.id === "placa-veiculo") {
     campo.value = letrasENumerosMaiusculos(campo.value).slice(0, 7);
   }
-
-  if (campo.id === "uf-evento") {
-    campo.value = (campo.value || "")
-      .replace(/[^a-zA-Z]/g, "")
-      .toUpperCase()
-      .slice(0, 2);
-  }
-
-  if (campo.id === "cidade-evento") {
-    campo.value = somenteLetrasEspacosHifenAcentos(campo.value).slice(0, 80);
-  }
 }
 
 function configurarValidacaoEmTempoReal() {
@@ -210,8 +230,8 @@ function configurarValidacaoEmTempoReal() {
     "doc-associado",
     "placa-veiculo",
     "uf-evento",
-    "nome-associado",
     "cidade-evento",
+    "nome-associado",
     "local-evento",
     "resumo-evento"
   ];
@@ -221,6 +241,11 @@ function configurarValidacaoEmTempoReal() {
     if (!campo) return;
 
     campo.addEventListener("input", () => {
+      normalizarCampo(campo);
+      validarCampo(campo);
+    });
+
+    campo.addEventListener("change", () => {
       normalizarCampo(campo);
       validarCampo(campo);
     });
@@ -239,8 +264,8 @@ function validarFormulario() {
     "doc-associado",
     "placa-veiculo",
     "uf-evento",
-    "nome-associado",
     "cidade-evento",
+    "nome-associado",
     "local-evento",
     "resumo-evento"
   ];
@@ -271,7 +296,7 @@ async function salvarCaso(event) {
 
   const docAssociado = somenteDigitos(valorOuNull("doc-associado"));
   const placaVeiculo = letrasENumerosMaiusculos(valorOuNull("placa-veiculo"));
-  const ufEvento = valorOuNull("uf-evento")?.trim().toUpperCase() || null;
+  const ufEvento = valorOuNull("uf-evento");
 
   const payload = {
     protocolo: textoLimitado("protocolo", 50),
@@ -282,8 +307,8 @@ async function salvarCaso(event) {
     doc_associado: docAssociado || null,
     id_contrato: textoLimitado("id-contrato", 50),
     placa_veiculo: placaVeiculo || null,
-    cidade_evento: textoLimitado("cidade-evento", 80),
-    uf_evento: ufEvento,
+    cidade_evento: valorOuNull("cidade-evento"),
+    uf_evento: ufEvento || null,
     local_evento: textoLimitado("local-evento", 150),
     resumo_evento: textoLimitado("resumo-evento", 1000),
 
@@ -306,12 +331,33 @@ async function salvarCaso(event) {
   if (form) {
     form.reset();
   }
+
+  const cidadeSelect = getElement("cidade-evento");
+  if (cidadeSelect) {
+    cidadeSelect.disabled = true;
+    limparSelect(cidadeSelect, "Selecione primeiro o estado");
+  }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   configurarLimitesHTML();
-  await carregarCidadesIBGE();
+  await carregarEstados();
   configurarValidacaoEmTempoReal();
+
+  const ufSelect = getElement("uf-evento");
+  if (ufSelect) {
+    ufSelect.addEventListener("change", async () => {
+      const cidadeSelect = getElement("cidade-evento");
+      await carregarCidadesDaUF(ufSelect.value);
+
+      if (cidadeSelect) {
+        cidadeSelect.value = "";
+        cidadeSelect.setCustomValidity("");
+      }
+
+      ufSelect.setCustomValidity("");
+    });
+  }
 
   const form = document.querySelector(".case-form");
   if (form) {
