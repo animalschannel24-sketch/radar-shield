@@ -39,77 +39,168 @@ function letrasENumerosMaiusculos(valor) {
   return (valor || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
-function validarCampos() {
-  const protocolo = valorOuNull("protocolo");
-  const docAssociadoBruto = valorOuNull("doc-associado");
-  const placaBruta = valorOuNull("placa-veiculo");
-  const ufEventoBruta = valorOuNull("uf-evento");
+function aplicarMaxLength(id, maximo) {
+  const campo = getElement(id);
+  if (!campo) return;
+  campo.maxLength = maximo;
+}
 
-  if (protocolo && protocolo.length > 50) {
-    return "O protocolo pode ter no máximo 50 caracteres.";
+function configurarLimitesHTML() {
+  aplicarMaxLength("protocolo", 50);
+  aplicarMaxLength("canal-entrada", 50);
+  aplicarMaxLength("unidade", 100);
+  aplicarMaxLength("nome-associado", 120);
+  aplicarMaxLength("doc-associado", 14);
+  aplicarMaxLength("id-contrato", 50);
+  aplicarMaxLength("placa-veiculo", 8);
+  aplicarMaxLength("cidade-evento", 80);
+  aplicarMaxLength("uf-evento", 2);
+  aplicarMaxLength("local-evento", 150);
+  aplicarMaxLength("resumo-evento", 1000);
+}
+
+function validarCampo(campo) {
+  if (!campo) return true;
+
+  const id = campo.id;
+  const valor = campo.value?.trim() || "";
+  let mensagem = "";
+
+  if (id === "protocolo" && valor.length > 50) {
+    mensagem = "O protocolo pode ter no máximo 50 caracteres.";
   }
 
-  if (docAssociadoBruto) {
-    const docAssociado = somenteDigitos(docAssociadoBruto);
+  if (id === "doc-associado" && valor) {
+    const cpf = somenteDigitos(valor);
 
-    if (docAssociado.length < 11) {
-      return "O CPF deve ter 11 números.";
-    }
-
-    if (docAssociado.length > 11) {
-      return "O CPF deve ter no máximo 11 números.";
+    if (cpf.length < 11) {
+      mensagem = "O CPF deve ter 11 números.";
+    } else if (cpf.length > 11) {
+      mensagem = "O CPF deve ter no máximo 11 números.";
     }
   }
 
-  if (placaBruta) {
-    const placa = letrasENumerosMaiusculos(placaBruta);
+  if (id === "placa-veiculo" && valor) {
+    const placa = letrasENumerosMaiusculos(valor);
 
     if (placa.length < 7) {
-      return "A placa deve ter 7 caracteres.";
-    }
-
-    if (placa.length > 7) {
-      return "A placa deve ter exatamente 7 caracteres.";
+      mensagem = "A placa deve ter 7 caracteres.";
+    } else if (placa.length > 7) {
+      mensagem = "A placa deve ter exatamente 7 caracteres.";
     }
   }
 
-  if (ufEventoBruta) {
-    const ufEvento = ufEventoBruta.trim().toUpperCase();
+  if (id === "uf-evento" && valor) {
+    const uf = valor.toUpperCase();
 
-    if (ufEvento.length !== 2) {
-      return "A UF deve ter exatamente 2 letras.";
+    if (uf.length !== 2) {
+      mensagem = "A UF deve ter exatamente 2 letras.";
+    } else if (!/^[A-Z]{2}$/.test(uf)) {
+      mensagem = "A UF deve conter apenas letras.";
     }
   }
 
-  const nomeAssociado = valorOuNull("nome-associado");
-  if (nomeAssociado && nomeAssociado.length > 120) {
-    return "O nome do associado pode ter no máximo 120 caracteres.";
+  if (id === "nome-associado" && valor.length > 120) {
+    mensagem = "O nome do associado pode ter no máximo 120 caracteres.";
   }
 
-  const cidadeEvento = valorOuNull("cidade-evento");
-  if (cidadeEvento && cidadeEvento.length > 80) {
-    return "A cidade do evento pode ter no máximo 80 caracteres.";
+  if (id === "cidade-evento" && valor.length > 80) {
+    mensagem = "A cidade do evento pode ter no máximo 80 caracteres.";
   }
 
-  const localEvento = valorOuNull("local-evento");
-  if (localEvento && localEvento.length > 150) {
-    return "O local do evento pode ter no máximo 150 caracteres.";
+  if (id === "local-evento" && valor.length > 150) {
+    mensagem = "O local do evento pode ter no máximo 150 caracteres.";
   }
 
-  const resumoEvento = valorOuNull("resumo-evento");
-  if (resumoEvento && resumoEvento.length > 1000) {
-    return "O resumo do evento pode ter no máximo 1000 caracteres.";
+  if (id === "resumo-evento" && valor.length > 1000) {
+    mensagem = "O resumo do evento pode ter no máximo 1000 caracteres.";
   }
 
-  return null;
+  campo.setCustomValidity(mensagem);
+  return mensagem === "";
+}
+
+function normalizarCampo(campo) {
+  if (!campo) return;
+
+  if (campo.id === "doc-associado") {
+    campo.value = somenteDigitos(campo.value).slice(0, 11);
+  }
+
+  if (campo.id === "placa-veiculo") {
+    campo.value = letrasENumerosMaiusculos(campo.value).slice(0, 7);
+  }
+
+  if (campo.id === "uf-evento") {
+    campo.value = (campo.value || "")
+      .replace(/[^a-zA-Z]/g, "")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+}
+
+function configurarValidacaoEmTempoReal() {
+  const ids = [
+    "protocolo",
+    "doc-associado",
+    "placa-veiculo",
+    "uf-evento",
+    "nome-associado",
+    "cidade-evento",
+    "local-evento",
+    "resumo-evento"
+  ];
+
+  ids.forEach((id) => {
+    const campo = getElement(id);
+    if (!campo) return;
+
+    campo.addEventListener("input", () => {
+      normalizarCampo(campo);
+      validarCampo(campo);
+    });
+
+    campo.addEventListener("blur", () => {
+      normalizarCampo(campo);
+      validarCampo(campo);
+      campo.reportValidity();
+    });
+  });
+}
+
+function validarFormulario() {
+  const ids = [
+    "protocolo",
+    "doc-associado",
+    "placa-veiculo",
+    "uf-evento",
+    "nome-associado",
+    "cidade-evento",
+    "local-evento",
+    "resumo-evento"
+  ];
+
+  for (const id of ids) {
+    const campo = getElement(id);
+    if (!campo) continue;
+
+    normalizarCampo(campo);
+    validarCampo(campo);
+
+    if (!campo.checkValidity()) {
+      campo.reportValidity();
+      campo.focus();
+      return false;
+    }
+  }
+
+  return true;
 }
 
 async function salvarCaso(event) {
   event.preventDefault();
 
-  const erroValidacao = validarCampos();
-  if (erroValidacao) {
-    alert(erroValidacao);
+  if (!validarFormulario()) {
     return;
   }
 
@@ -153,8 +244,10 @@ async function salvarCaso(event) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const form = document.querySelector(".case-form");
+  configurarLimitesHTML();
+  configurarValidacaoEmTempoReal();
 
+  const form = document.querySelector(".case-form");
   if (form) {
     form.addEventListener("submit", salvarCaso);
   }
