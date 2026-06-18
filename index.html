@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Radar Shield</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: rgba(15, 23, 42, 0.95);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+    }
+    header h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+    header p {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.1);
+      color: #7dd3fc;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+    .btn {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      background: rgba(15, 23, 42, 0.8);
+      color: #e5e7eb;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    }
+    .btn:hover {
+      background: rgba(30, 64, 175, 0.9);
+      border-color: rgba(129, 140, 248, 0.9);
+      transform: translateY(-1px);
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      padding: 20px 24px 24px;
+      gap: 20px;
+    }
+
+    .col-left, .col-right {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 18px 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .col-left { flex: 3; }
+    .col-right { flex: 2; }
+
+    h2 {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+    .section {
+      border-radius: 10px;
+      padding: 12px 12px 10px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(55, 65, 81, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .section small {
+      font-size: 0.7rem;
+      color: #9ca3af;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+    .row > div {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    label {
+      font-size: 0.8rem;
+      color: #cbd5f5;
+    }
+    input[type="text"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+    }
+    textarea { resize: vertical; min-height: 50px; }
+
+    .chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      background: rgba(15, 23, 42, 0.8);
+      cursor: pointer;
+    }
+
+    .doc-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 0;
+      border-bottom: 1px dashed rgba(31, 41, 55, 0.9);
+    }
+    .doc-line:last-child { border-bottom: none; }
+    .doc-name {
+      font-size: 0.8rem;
+      color: #e5e7eb;
+    }
+    .doc-status {
+      font-size: 0.7rem;
+      color: #9ca3af;
+    }
+    .doc-select {
+      min-width: 120px;
+    }
+
+    .questions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .question-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .question-text {
+      font-size: 0.78rem;
+      color: #d1d5db;
+      flex: 1;
+    }
+    .question-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .pill {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      cursor: pointer;
+    }
+
+    .status-card {
+      border-radius: 12px;
+      padding: 14px 14px 12px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 64, 175, 0.95));
+      border: 1px solid rgba(129, 140, 248, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .status-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #a5b4fc;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      background: rgba(15, 23, 42, 0.85);
+      width: fit-content;
+      font-size: 0.8rem;
+    }
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #facc15;
+    }
+    .status-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    .status-desc {
+      font-size: 0.8rem;
+      color: #d1d5db;
+    }
+
+    .alerts, .missing, .next-steps {
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .alerts h3,
+    .missing h3,
+    .next-steps h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+    }
+    .alerts ul,
+    .missing ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .alerts li,
+    .missing li {
+      font-size: 0.8rem;
+      color: #e5e7eb;
+    }
+
+    .next-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .next-btn {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      cursor: pointer;
+    }
+
+    footer {
+      padding: 12px 24px 16px;
+      border-top: 1px solid rgba(31, 41, 55, 0.9);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.78rem;
+      color: #9ca3af;
+      background: rgba(15, 23, 42, 0.95);
+    }
+    .cta-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .cta-footer button {
+      font-size: 0.78rem;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: none;
+      background: #22c55e;
+      color: #022c22;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    @media (max-width: 960px) {
+      main {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        Pré-negativa
+      </div>
+      <div>
+        <h1>Radar Shield</h1>
+        <p>Valide a solidez da negativa antes de comunicar o associado.</p>
+      </div>
+    </div>
+    <button class="btn">
+      <span>＋</span>
+      Nova análise
+    </button>
+  </header>
+
+  <main>
+    <section class="col-left">
+      <div class="section">
+        <h2>Dados do caso</h2>
+        <small>Informações mínimas do aviso de sinistro.</small>
+        <div class="row">
+          <div>
+            <label for="tipoEvento">Tipo de evento</label>
+            <select id="tipoEvento">
+              <option>Selecione...</option>
+              <option>Colisão</option>
+              <option>Roubo</option>
+              <option>Furto</option>
+              <option>Incêndio</option>
+              <option>Perda total</option>
+              <option>Terceiros</option>
+            </select>
+          </div>
+          <div>
+            <label for="dataEvento">Data do evento</label>
+            <input type="date" id="dataEvento" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="dataComunicacao">Data da comunicação</label>
+            <input type="date" id="dataComunicacao" />
+          </div>
+          <div>
+            <label for="numInterno">Nº interno</label>
+            <input type="text" id="numInterno" placeholder="Ex.: 2026-000123" />
+          </div>
+        </div>
+        <div>
+          <label for="terceiro">Terceiro envolvido?</label>
+          <select id="terceiro">
+            <option>Não</option>
+            <option>Sim</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Kit documental</h2>
+        <small>Marque o status de cada documento relevante.</small>
+        <div class="doc-line">
+          <div>
+            <div class="doc-name">Boletim de Ocorrência (B.O.)</div>
+            <div class="doc-status">Registro do evento</div>
+          </div>
+          <select class="doc-select">
+            <option>Recebido</option>
+            <option>Ilegível</option>
+            <option>Incompatível</option>
+            <option>Não apresentado</option>
+            <option>Não se aplica</option>
+          </select>
+        </div>
+        <div class="doc-line">
+          <div>
+            <div class="doc-name">CNH do condutor</div>
+            <div class="doc-status">Situação e habilitação</div>
+          </div>
+          <select class="doc-select">
+            <option>Recebido</option>
+            <option>Ilegível</option>
+            <option>Incompatível</option>
+            <option>Não apresentado</option>
+            <option>Não se aplica</option>
+          </select>
+        </div>
+        <div class="doc-line">
+          <div>
+            <div class="doc-name">CRLV / documento do veículo</div>
+            <div class="doc-status">Propriedade e licenciamento</div>
+          </div>
+          <select class="doc-select">
+            <option>Recebido</option>
+            <option>Ilegível</option>
+            <option>Incompatível</option>
+            <option>Não apresentado</option>
+            <option>Não se aplica</option>
+          </select>
+        </div>
+        <div class="doc-line">
+          <div>
+            <div class="doc-name">Fotos do veículo</div>
+            <div class="doc-status">Danos e compatibilidade</div>
+          </div>
+          <select class="doc-select">
+            <option>Recebido</option>
+            <option>Ilegível</option>
+            <option>Incompatível</option>
+            <option>Não apresentado</option>
+            <option>Não se aplica</option>
+          </select>
+        </div>
+        <div class="doc-line">
+          <div>
+            <div class="doc-name">Relato do associado</div>
+            <div class="doc-status">Descrição do ocorrido</div>
+          </div>
+          <select class="doc-select">
+            <option>Recebido</option>
+            <option>Ilegível</option>
+            <option>Incompatível</option>
+            <option>Não apresentado</option>
+            <option>Não se aplica</option>
+          </select>
+        </div>
+        <div class="doc-line">
+          <div>
+            <div class="doc-name">Comprovante de adimplência</div>
+            <div class="doc-status">Situação de pagamento</div>
+          </div>
+          <select class="doc-select">
+            <option>Recebido</option>
+            <option>Ilegível</option>
+            <option>Incompatível</option>
+            <option>Não apresentado</option>
+            <option>Não se aplica</option>
+          </select>
+        </div>
+        <div class="doc-line">
+          <div>
+            <div class="doc-name">Vistoria de adesão</div>
+            <div class="doc-status">Condições prévias do veículo</div>
+          </div>
+          <select class="doc-select">
+            <option>Recebido</option>
+            <option>Ilegível</option>
+            <option>Incompatível</option>
+            <option>Não apresentado</option>
+            <option>Não se aplica</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Motivo da negativa</h2>
+        <small>Selecione o fundamento principal pretendido.</small>
+        <div class="chips-row">
+          <span class="chip">Inadimplência</span>
+          <span class="chip">Comunicação tardia</span>
+          <span class="chip">Documento faltante</span>
+          <span class="chip">Inconsistência narrativa</span>
+          <span class="chip">Exclusão contratual</span>
+          <span class="chip">Condutor não amparado</span>
+          <span class="chip">Uso divergente</span>
+          <span class="chip">Suspeita de fraude</span>
+        </div>
+        <div>
+          <label for="justificativa">Justificativa pretendida (1 frase)</label>
+          <textarea id="justificativa" placeholder="Ex.: Negativa por inadimplência anterior ao evento, comunicada ao associado em..."></textarea>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Perguntas de exceção</h2>
+        <small>São elas que expõem fragilidades e incoerências.</small>
+        <div class="questions">
+          <div class="question-line">
+            <div class="question-text">Algum documento ausente pode ter sido perdido/roubado no próprio evento?</div>
+            <div class="question-actions">
+              <span class="pill">Sim</span>
+              <span class="pill">Não</span>
+              <span class="pill">Não sei</span>
+            </div>
+          </div>
+          <div class="question-line">
+            <div class="question-text">Existe prova de comunicação prévia sobre inadimplência ou exclusão?</div>
+            <div class="question-actions">
+              <span class="pill">Sim</span>
+              <span class="pill">Não</span>
+              <span class="pill">Não se aplica</span>
+            </div>
+          </div>
+          <div class="question-line">
+            <div class="question-text">O B.O. e as fotos são compatíveis com o relato do associado?</div>
+            <div class="question-actions">
+              <span class="pill">Sim</span>
+              <span class="pill">Não</span>
+              <span class="pill">Parcial</span>
+            </div>
+          </div>
+          <div class="question-line">
+            <div class="question-text">A cláusula usada está clara no contrato/regulamento?</div>
+            <div class="question-actions">
+              <span class="pill">Sim</span>
+              <span class="pill">Não</span>
+              <span class="pill">Dúvida</span>
+            </div>
+          </div>
+          <div class="question-line">
+            <div class="question-text">A prova do fundamento é documental (e não apenas verbal)?</div>
+            <div class="question-actions">
+              <span class="pill">Sim</span>
+              <span class="pill">Não</span>
+            </div>
+          </div>
+          <div class="question-line">
+            <div class="question-text">Este caso já foi revisado por responsável superior?</div>
+            <div class="question-actions">
+              <span class="pill">Sim</span>
+              <span class="pill">Não</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="col-right">
+      <div class="status-card">
+        <div class="status-label">Status do caso</div>
+        <div class="status-badge">
+          <span class="status-dot"></span>
+          <span>Risco moderado de negativa frágil</span>
+        </div>
+        <div class="status-title">Revise antes de comunicar a negativa.</div>
+        <div class="status-desc">
+          Com base nas respostas, há sinais de que a justificativa pode estar mal documentada ou juridicamente exposta.
+        </div>
+      </div>
+
+      <div class="alerts">
+        <h3>Alertas encontrados</h3>
+        <ul>
+          <li>・ Documento essencial marcado como “não apresentado” sem exceção registrada.</li>
+          <li>・ Inadimplência sem prova clara de comunicação prévia ao associado.</li>
+          <li>・ Incompatibilidade potencial entre relato, B.O. e fotos do evento.</li>
+        </ul>
+      </div>
+
+      <div class="missing">
+        <h3>O que falta para sustentar</h3>
+        <ul>
+          <li>・ Formalizar a exceção de documento roubado/perdido, quando for o caso.</li>
+          <li>・ Anexar evidência da comunicação de inadimplência ou exclusão.</li>
+          <li>・ Registrar parecer de revisão (gestor ou jurídico) para casos cinzentos.</li>
+        </ul>
+      </div>
+
+      <div class="next-steps">
+        <h3>Próxima ação sugerida</h3>
+        <div class="next-actions">
+          <button class="next-btn">Pedir reforço documental</button>
+          <button class="next-btn">Encaminhar para revisão</button>
+          <button class="next-btn">Não comunicar negativa ainda</button>
+          <button class="next-btn">Caso apto para decisão</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div>Protótipo estático · Radar Shield · v0.1</div>
+    <div class="cta-footer">
+      <span>Quer aplicar este filtro em todos os casos da sua operação?</span>
+      <button>Solicitar acesso</button>
+    </div>
+  </footer>
+</body>
+</html>
