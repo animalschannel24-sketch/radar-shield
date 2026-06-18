@@ -59,14 +59,44 @@ function configurarLimitesHTML() {
   aplicarMaxLength("resumo-evento", 1000);
 }
 
-function placaValida(placa) {
-  if (!placa) return false;
-
+function placaValidaCompleta(placa) {
   const placaNormal = letrasENumerosMaiusculos(placa);
   const padraoAntigo = /^[A-Z]{3}[0-9]{4}$/;
   const padraoMercosul = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/;
 
   return padraoAntigo.test(placaNormal) || padraoMercosul.test(placaNormal);
+}
+
+function placaParcialValida(placa) {
+  const valor = letrasENumerosMaiusculos(placa);
+
+  if (!valor) return true;
+  if (valor.length > 7) return false;
+
+  for (let i = 0; i < valor.length; i++) {
+    const char = valor[i];
+
+    if (i <= 2) {
+      if (!/[A-Z]/.test(char)) return false;
+      continue;
+    }
+
+    if (i === 3) {
+      if (!/[0-9]/.test(char)) return false;
+      continue;
+    }
+
+    if (i === 4) {
+      if (!/[A-Z0-9]/.test(char)) return false;
+      continue;
+    }
+
+    if (i >= 5 && i <= 6) {
+      if (!/[0-9]/.test(char)) return false;
+    }
+  }
+
+  return true;
 }
 
 function limparSelect(select, placeholder) {
@@ -150,7 +180,7 @@ async function carregarCidadesDaUF(uf) {
   }
 }
 
-function validarCampo(campo) {
+function validarCampo(campo, mostrarErroParcial = false) {
   if (!campo) return true;
 
   const id = campo.id;
@@ -164,15 +194,15 @@ function validarCampo(campo) {
   if (id === "doc-associado" && valor) {
     const cpf = somenteDigitos(valor);
 
-    if (cpf.length < 11) {
-      mensagem = "O CPF deve ter 11 números.";
-    } else if (cpf.length > 11) {
+    if (cpf.length > 11) {
       mensagem = "O CPF deve ter no máximo 11 números.";
     }
   }
 
   if (id === "placa-veiculo" && valor) {
-    if (!placaValida(valor)) {
+    if (!placaParcialValida(valor)) {
+      mensagem = "A placa começa com 3 letras e depois segue o padrão ABC1234 ou ABC1D23.";
+    } else if ((mostrarErroParcial || valor.length === 7) && !placaValidaCompleta(valor)) {
       mensagem = "A placa deve estar em formato válido, como ABC1234 ou ABC1D23.";
     }
   }
@@ -242,17 +272,26 @@ function configurarValidacaoEmTempoReal() {
 
     campo.addEventListener("input", () => {
       normalizarCampo(campo);
+
+      if (id === "placa-veiculo") {
+        validarCampo(campo, true);
+        if (!campo.checkValidity()) {
+          campo.reportValidity();
+        }
+        return;
+      }
+
       validarCampo(campo);
     });
 
     campo.addEventListener("change", () => {
       normalizarCampo(campo);
-      validarCampo(campo);
+      validarCampo(campo, true);
     });
 
     campo.addEventListener("blur", () => {
       normalizarCampo(campo);
-      validarCampo(campo);
+      validarCampo(campo, true);
       campo.reportValidity();
     });
   });
@@ -275,13 +314,22 @@ function validarFormulario() {
     if (!campo) continue;
 
     normalizarCampo(campo);
-    validarCampo(campo);
+    validarCampo(campo, true);
 
     if (!campo.checkValidity()) {
       campo.reportValidity();
       campo.focus();
       return false;
     }
+  }
+
+  const cpfCampo = getElement("doc-associado");
+  const cpf = somenteDigitos(valorOuNull("doc-associado"));
+  if (cpfCampo && cpf && cpf.length !== 11) {
+    cpfCampo.setCustomValidity("O CPF deve ter exatamente 11 números.");
+    cpfCampo.reportValidity();
+    cpfCampo.focus();
+    return false;
   }
 
   return true;
