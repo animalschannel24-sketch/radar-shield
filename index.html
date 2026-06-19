@@ -718,15 +718,23 @@
           </ul>
         </div>
 
-        <div class="next-steps">
-          <h3>Próxima ação sugerida</h3>
-          <div class="next-actions">
-            <button class="next-btn">Pedir reforço documental</button>
-            <button class="next-btn">Encaminhar para revisão</button>
-            <button class="next-btn">Não comunicar negativa ainda</button>
-            <button class="next-btn">Caso apto para decisão</button>
-          </div>
-        </div>
+      <div class="next-steps">
+  <h3>Status final do caso</h3>
+
+  <div class="next-actions">
+    <button class="next-btn" id="btn-concluido" type="button">Concluído</button>
+    <button class="next-btn" id="btn-nao-concluido" type="button">Não concluído</button>
+  </div>
+
+  <div id="bloco-motivo" style="margin-top: 12px; display: none;">
+    <label for="motivo-nao-conclusao">Motivo da não conclusão</label>
+    <textarea id="motivo-nao-conclusao" placeholder="Ex.: documentação insuficiente para sustentar a negativa neste momento."></textarea>
+  </div>
+
+  <div style="margin-top: 12px;">
+    <button class="btn" id="btn-aplicar-resultado" type="button">Aplicar resultado</button>
+  </div>
+</div>
       </section>
     </div>
 
