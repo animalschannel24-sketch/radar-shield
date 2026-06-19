@@ -412,3 +412,64 @@ document.addEventListener("DOMContentLoaded", async () => {
     form.addEventListener("submit", salvarCaso);
   }
 });
+let statusEscolhido = null;
+
+function configurarStatusFinal() {
+  const btnConcluido = document.getElementById("btn-concluido");
+  const btnNaoConcluido = document.getElementById("btn-nao-concluido");
+  const btnAplicarResultado = document.getElementById("btn-aplicar-resultado");
+  const blocoMotivo = document.getElementById("bloco-motivo");
+  const campoMotivo = document.getElementById("motivo-nao-conclusao");
+
+  if (!btnConcluido || !btnNaoConcluido || !btnAplicarResultado) return;
+
+  btnConcluido.addEventListener("click", () => {
+    statusEscolhido = "concluido";
+    blocoMotivo.style.display = "none";
+    btnConcluido.style.borderColor = "#22c55e";
+    btnNaoConcluido.style.borderColor = "rgba(148, 163, 184, 0.7)";
+  });
+
+  btnNaoConcluido.addEventListener("click", () => {
+    statusEscolhido = "nao-concluido";
+    blocoMotivo.style.display = "block";
+    btnNaoConcluido.style.borderColor = "#f87171";
+    btnConcluido.style.borderColor = "rgba(148, 163, 184, 0.7)";
+  });
+
+  btnAplicarResultado.addEventListener("click", () => {
+    const statusBadgeText = document.getElementById("status-badge-text");
+    const statusTitle = document.getElementById("status-title");
+    const statusDesc = document.getElementById("status-desc");
+    const statusDot = document.getElementById("status-dot");
+
+    if (!statusEscolhido) {
+      alert("Escolha primeiro: Concluído ou Não concluído.");
+      return;
+    }
+
+    if (statusEscolhido === "concluido") {
+      statusBadgeText.textContent = "Concluído";
+      statusTitle.textContent = "O caso está concluído.";
+      statusDesc.textContent = "A análise foi encerrada com base nos elementos atualmente registrados.";
+      statusDot.style.background = "#22c55e";
+      return;
+    }
+
+    const motivo = campoMotivo.value.trim();
+
+    if (!motivo) {
+      alert("Preencha o motivo da não conclusão.");
+      return;
+    }
+
+    statusBadgeText.textContent = "Não concluído";
+    statusTitle.textContent = "A negativa ainda não está pronta para comunicação.";
+    statusDesc.textContent = "Motivo: " + motivo;
+    statusDot.style.background = "#f87171";
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  configurarStatusFinal();
+});
